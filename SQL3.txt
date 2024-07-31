@@ -1,0 +1,117 @@
+SELECT
+--    UserID,
+    Source,
+    SUM(Rub) as Summ,
+    Max(Rub) as Maxi,
+    Min(Rub) as Mini,
+    AVG(Rub) as Mean
+--    DeviceID
+--    count(DISTINCT UserID) as count_user
+FROM
+(
+    SELECT
+        l.UserID as UserID,
+        l.DeviceID as DeviceID,
+        l.Rub as Rub,
+        r.Source as Source
+    FROM 
+    (
+        SELECT
+            l.UserID as UserID,
+            l.Rub as Rub,
+            r.DeviceID as DeviceID
+        FROM checks as l
+        JOIN devices as r
+            ON l.UserID = r.UserID
+        ) as l
+    JOIN installs as r
+        ON l.DeviceID == r.DeviceID
+)
+--WHERE Source == 'Source 7'
+GROUP BY Source
+ORDER BY Source
+--HAVING Source == 'Source 7'
+--LIMIT 15
+
+
+SELECT
+    DeviceID,
+    toStartOfMonth(CAST(BuyDate as date)) as MonthDate
+FROM
+(
+    SELECT
+        l.UserID as UserID,
+        l.Rub as Rub,
+        l.BuyDate as BuyDate,
+        r.DeviceID as DeviceID
+    FROM checks as l
+    JOIN devices as r
+        ON l.UserID = r.UserID
+    )
+WHERE MonthDate = '2019-05-01'
+ORDER BY DeviceID ASC
+--GROUP BY MonthDate
+--HAVING Source == 'Source 7'
+LIMIT 5
+
+№10
+
+SELECT
+    Platform,
+    Source,
+    AVG(event) as mean_event
+FROM
+(
+    SELECT
+        l.Platform as Platform,
+        l.Source as Source,
+        r.events as event,
+        r.DeviceID as DeviceID
+    FROM installs as l
+    JOIN events as r
+        ON l.DeviceID = r.DeviceID
+    )
+GROUP BY Platform, Source
+ORDER BY mean_event DESC
+LIMIT 5
+
+№11
+SELECT
+    Platform,
+--    events,
+--    DeviceID
+    count(DISTINCT DeviceID) as count_Device
+FROM
+(
+    SELECT
+        l.Platform as Platform,
+        r.DeviceID as DeviceID,
+        r.events as events
+    FROM installs as l
+    LEFT SEMI JOIN events as r
+        ON l.DeviceID = r.DeviceID
+    )
+WHERE events <> NaN
+GROUP BY Platform
+--ORDER BY mean_event DESC
+LIMIT 15
+
+#12
+
+SELECT
+    l.Platform as Platform,
+    COUNT(DISTINCT r.DeviceID)/COUNT(DISTINCT l.DeviceID) as count_ID
+FROM installs as l
+LEFT JOIN events as r
+    ON l.DeviceID = r.DeviceID
+GROUP BY Platform
+
+№13
+
+SELECT
+    DISTINCT l.DeviceID as DeviceID
+FROM events as l
+LEFT ONLY JOIN installs as r
+    ON l.DeviceID = r.DeviceID
+ORDER BY DeviceID DESC
+LIMIT 10

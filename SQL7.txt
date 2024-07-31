@@ -1,0 +1,88 @@
+#1
+CREATE TABLE IF NOT EXISTS test.retail (
+    InvoiceNo String,
+    StockCode String,
+    Description String,
+    Quantity UInt32,
+    InvoiceDate DateTime('Europe/London'),
+    UnitPrice Decimal64(3),
+    CustomerID Int32,
+    Country String
+) ENGINE = MergeTree
+ORDER BY (InvoiceDate, CustomerID)
+
+#2
+SELECT
+    Country,
+    COUNT(DISTINCT CustomerID) as Count_CustomerID
+FROM default.retail
+GROUP BY Country
+ORDER BY Count_CustomerID DESC
+
+№3
+SELECT
+    Country,
+    toStartOfMonth(InvoiceDate) as InvoiceDate,
+    COUNT(DISTINCT CustomerID) as CustomerID
+FROM default.retail
+WHERE Country == 'Netherlands'
+    OR Country == 'Australia'
+    OR Country == 'United Kingdom'
+--    AND InvoiceDate == '01/02/2011'
+GROUP BY Country, InvoiceDate
+ORDER BY CustomerID
+
+№4
+SELECT 
+    Country,
+    AVG(TotalPrice) as AOV
+FROM (
+    SELECT
+        InvoiceNo,
+        Country,
+        SUM(Quantity*UnitPrice) AS TotalPrice
+    FROM default.retail
+    WHERE Quantity > 0
+    GROUP BY InvoiceNo, Country
+    )
+GROUP BY Country
+ORDER BY AOV DESC
+
+#5
+
+SELECT 
+    Country,
+    InvoiceDate,
+    AVG(TotalPrice) as AOV
+FROM (
+    SELECT
+        InvoiceNo,
+        Country,
+        toStartOfMonth(InvoiceDate) as InvoiceDate,
+        SUM(Quantity*UnitPrice) AS TotalPrice
+    FROM default.retail
+    WHERE Quantity > 0
+    GROUP BY InvoiceNo, Country, InvoiceDate
+    )
+WHERE Country IN ['United Kingdom', 'Germany', 'France', 'Spain', 'Netherlands', 'Belgium', 'Switzerland', 'Portugal', 'Australia', 'USA']
+GROUP BY Country, InvoiceDate
+ORDER BY AOV DESC
+
+#6
+
+SELECT 
+    Country,
+    AVG(Quantity) as Quantity
+FROM (
+    SELECT
+        InvoiceNo,
+        Country,
+        SUM(Quantity) as Quantity
+    FROM default.retail
+    GROUP BY InvoiceNo, Country
+    )
+WHERE Country == 'Canada'
+GROUP BY Country
+
+#7
+

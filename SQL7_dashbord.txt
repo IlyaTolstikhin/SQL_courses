@@ -1,0 +1,133 @@
+--plu4046
+--plu4225
+--plu4770
+--conventional
+--organic
+--SanFrancisco, NewYork
+    SELECT
+        SUM(average_price*total_volume) as trade_turnover,
+        toStartOfMonth(date) as mounth,
+        region
+    FROM default.avocado
+    WHERE region in ['NewYork','SanFrancisco']
+    GROUP BY (mounth, region)
+UNION ALL
+    SELECT
+        CAST(AVG(trade_turnover) AS Decimal64(4)) as trade_turnover,
+        mounth,
+        'RestRegion' as region
+    FROM (
+        SELECT
+            SUM(average_price*total_volume) as trade_turnover,
+            toStartOfMonth(date) as mounth,
+            region
+        FROM default.avocado
+        WHERE region not in ['NewYork','SanFrancisco', 'TotalUS']
+        GROUP BY (mounth,region)
+        )
+    GROUP BY (mounth)
+
+№2
+
+    SELECT
+         CAST(AVG(average_price) AS Decimal64(4)) as average_price,
+        toStartOfMonth(date) as mounth,
+        region
+    FROM default.avocado
+    WHERE region in ['NewYork','SanFrancisco']
+    GROUP BY (mounth, region)
+UNION ALL
+    SELECT
+        CAST(AVG(average_price) AS Decimal64(4)) as average_price,
+        mounth,
+        'RestRegion' as region
+    FROM (
+        SELECT
+             CAST(AVG(average_price) AS Decimal64(4)) as average_price,
+            toStartOfMonth(date) as mounth,
+            region
+        FROM default.avocado
+        WHERE region not in ['NewYork','SanFrancisco', 'TotalUS']
+        GROUP BY (mounth,region)
+        )
+    GROUP BY (mounth)
+
+#3
+
+    SELECT
+        SUM(total_volume) as total_volume,
+        toStartOfMonth(date) as mounth,
+        region
+    FROM default.avocado
+    WHERE region in ['NewYork','SanFrancisco']
+    GROUP BY (mounth, region)
+UNION ALL
+    SELECT
+        CAST(AVG(total_volume) AS Decimal64(4)) as total_volume,
+        mounth,
+        'RestRegion' as region
+    FROM (
+        SELECT
+            SUM(total_volume) as total_volume,
+            toStartOfMonth(date) as mounth,
+            region
+        FROM default.avocado
+        WHERE region not in ['NewYork','SanFrancisco', 'TotalUS']
+        GROUP BY (mounth,region)
+        )
+    GROUP BY (mounth)
+
+
+Стоит отметить, что всегда нужно понимать, какие ответы мне, как аналитику, необходимо достать из данных. Данные по авокадо содержат много полезной информации, и можно было бы разработать большое количество гипотез, проверять их, визуализировать и делать выводы, но я ограничился "проходом" по верхнему уровню. Судя по трём первым графикам, где сравнивается товарооборот, средняя стоимость и объем продаж авокадо за всё время в регионах - Нью-Йорк, Сан-Франциско и все остальные регионы, можно сделать вывод о том, что Нью-Йорк имеет продажи выше средних за счёт бОльшей средней стоимости и бОльшего объема продаж, чем другие регионы в целом. Сан-Франциско показывает средние продажи по США, но имеет среднюю стоимость авокадо выше, а объёмы продаж меньше средних.
+
+
+#4
+SELECT
+    SUM(total_volume*average_price) as tt,
+--    SUM(total_volume) as total_volume,
+--    AVG(average_price) as average_price,
+    toStartOfMonth(date) as mounth,
+    type
+FROM default.avocado
+WHERE region not in ['TotalUS']
+GROUP BY (mounth,type)
+ORDER BY mounth
+
+Исходя из разбивки по типу авокадо можно сделать вывод, что больше денег приносит продажи обычного авокадо из-за большого объема продаж (средняя стоимость у органического выше). Причинами может служит ограниченное количество поставок органического авокадо (то есть клиенты готовы покупать больше, но товара нет), либо малая лояльность покупателей к органическому типу авокадо.
+
+
+
+#5
+
+SELECT
+    SUM(small_bags)/SUM(total_bags) as small_total_bags,
+    SUM(large_bags)/SUM(total_bags) as part_large_bags,
+    SUM(xlarge_bags)/SUM(total_bags) as part_xlarge_bags,
+--    SUM(total_volume) as total_volume,
+--    AVG(average_price) as average_price,
+    toStartOfMonth(date) as mounth
+FROM default.avocado
+WHERE region not in ['TotalUS']
+GROUP BY (mounth)
+ORDER BY mounth
+
+Исходя из данных по распределению количества купленных коробок с авокадо по размеру коробок, то наглядно видно, что чаще всего покупают маленькие коробки (в среднем около 75%), также по доле заказов больших коробок можно отследить сезонность авокадо, а именно, летом спрос среди покупателей вырастает.
+
+
+#6
+
+SELECT
+--    toStartOfMonth(date) as mounth,
+    region,
+    SUM(plu4225)+SUM(plu4046)+SUM(plu4770) as total_sum,
+    SUM(plu4046)/(SUM(plu4225)+SUM(plu4046)+SUM(plu4770)) as part_plu4046,
+    SUM(plu4225)/(SUM(plu4225)+SUM(plu4046)+SUM(plu4770)) as part_plu4225,
+    SUM(plu4770)/(SUM(plu4225)+SUM(plu4046)+SUM(plu4770)) as part_plu4770
+FROM default.avocado
+WHERE region not in ['TotalUS']
+GROUP BY region
+ORDER BY total_sum DESC
+LIMIT 15
+
+
+Были отобраны топ-15  регионов по объему продаж авокадо с PLU 4046, 4225, 4770. Визуально наблюдается корреляция между регионами и преобладанием долей определенного авокадо. На Северо-Востоке и среднем западе (NewYork, Northeast, Chicago, GreatLakes и др.) преобладает доля 4225, а вот по количеству проданных авокадо преобладает 4046

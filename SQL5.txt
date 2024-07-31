@@ -1,0 +1,130 @@
+№4
+
+SELECT
+    id,
+    reviews_per_month,
+    review_scores_rating
+FROM 
+    listings
+WHERE 
+        toFloat32OrNull(review_scores_rating) > (SELECT AVG(toFloat32OrNull(review_scores_rating)) FROM listings)
+    AND
+        reviews_per_month < 3
+ORDER BY reviews_per_month DESC, toFloat32OrNull(review_scores_rating) DESC
+LIMIT 15
+    
+#5
+WITH
+    (SELECT AVG(geoDistance(13.4050, 52.5200, toFloat32OrNull(longitude), toFloat32OrNull(latitude))) 
+    FROM listings
+    WHERE room_type = 'Private room'
+    ) as avg_distance
+
+SELECT
+    host_id,
+    id,
+    geoDistance(13.4050, 52.5200, toFloat32OrNull(longitude), toFloat32OrNull(latitude)) as distance
+FROM listings
+WHERE room_type = 'Private room'
+    AND
+      distance < avg_distance
+ORDER BY distance DESC
+LIMIT 3
+
+#6
+WITH
+    (SELECT AVG(geoDistance(13.4050, 52.5200, toFloat32OrNull(longitude), toFloat32OrNull(latitude))) 
+    FROM listings
+    ) as avg_distance,
+    toFloat32OrNull(replaceRegexpAll(price, '[$,]','')) + toFloat32OrNull(replaceRegexpAll(cleaning_fee, '[$,]',''))/7 as full_price
+
+SELECT
+    host_id,
+    toStartOfMonth(toDateOrNull(last_review)) as last_review,
+    multiSearchAnyCaseInsensitive(amenities, ['WiFI']) as bool_wifi,
+    geoDistance(13.4050, 52.5200, toFloat32OrNull(longitude), toFloat32OrNull(latitude)) as distance,
+    toFloat64OrNull(review_scores_rating) as review_scores_rating
+FROM listings
+WHERE distance < avg_distance
+    AND
+        full_price < 100
+    AND
+        last_review > '2018-09-01'
+    AND
+        bool_wifi = 1 
+ORDER BY review_scores_rating DESC
+LIMIT 3
+
+#7
+WITH
+    (SELECT AVG(count_reviewer_id)
+    FROM (
+        SELECT
+            listing_id,
+            COUNT(DISTINCT reviewer_id) as count_reviewer_id
+        FROM reviews
+        GROUP BY listing_id
+          )
+    ) as avg_count
+SELECT
+    l.listing_id as id,
+    COUNT(DISTINCT r.reviewer_id) as reviewer_id
+FROM
+    (
+    SELECT
+        DISTINCT listing_id
+    FROM
+        calendar_summary
+    WHERE available = 't'
+    ) as l
+JOIN reviews as r
+    ON l.listing_id= r.listing_id
+GROUP BY id
+HAVING reviewer_id > avg_count
+ORDER BY id ASC
+LIMIT 10
+
+#11
+
+ SELECT
+    SUM(sum_rub) as sum_rub,
+    segment
+FROM (
+     SELECT
+        UserID,
+        sum_rub,
+        avg_rub,
+        CASE
+            WHEN avg_rub < 5 THEN 'A'
+            WHEN avg_rub >= 5 AND avg_rub < 10 THEN 'B'
+            WHEN avg_rub >= 10 AND avg_rub < 20 THEN 'C'
+            ELSE 'D'
+        END as segment
+    FROM (
+        SELECT 
+            UserID,
+            SUM(Rub) as sum_rub,
+            AVG(Rub) as avg_rub
+        FROM checks
+        GROUP BY UserID
+    )
+    ORDER BY UserID ASC
+    )
+GROUP BY segment
+ORDER BY sum_rub DESC
+
+№12
+
+SELECT
+    host_id,
+    CASE
+        WHEN multiSearchAnyCaseInsensitive(amenities, ['kitchen']) = 1 AND multiSearchAnyCaseInsensitive(cancellation_policy, ['flexible']) = 1 THEN 'good'
+        WHEN multiSearchAnyCaseInsensitive(amenities, ['kitchen']) = 1 AND multiSearchAnyCaseInsensitive(cancellation_policy, ['flexible']) = 0 THEN 'ok'
+        ELSE 'not ok'
+    END as flag
+FROM 
+    listings
+ORDER BY flag ASC
+LIMIT 5
+
+

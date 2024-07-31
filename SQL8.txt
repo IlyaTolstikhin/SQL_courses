@@ -1,0 +1,76 @@
+SELECT 
+    region,
+    date,
+    SUM(total_volume) OVER win as volume
+FROM avocado
+WHERE (region ='NewYork' OR region = 'SanFrancisco') AND type = 'organic'
+WINDOW win AS
+    (
+    PARTITION BY region
+    ORDER BY date ASC
+    ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+    )
+ORDER BY region
+LIMIT 100
+
+#2
+
+SELECT 
+    region,
+    date,
+    SUM(total_volume) OVER win as volume
+FROM avocado
+WHERE (region ='NewYork' OR region = 'SanFrancisco') AND type = 'organic'
+WINDOW win AS
+    (
+    PARTITION BY date
+    ORDER BY date ASC
+    ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+    )
+ORDER BY region
+
+#3
+
+SELECT 
+    region,
+    date,
+    total_volume-lag(total_volume, 1) OVER win as week_diff
+FROM avocado
+WHERE (region ='TotalUS') AND type = 'conventional'
+WINDOW win AS
+    (
+    PARTITION BY region
+    ORDER BY date ASC
+    ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+    )
+#4
+
+SELECT 
+    region,
+    date,
+    type,
+    total_volume-lag(total_volume, 1) OVER win as week_diff
+FROM avocado
+WHERE (region ='NewYork') AND (date >= '01/01/18' AND date < '01/01/19')
+WINDOW win AS
+    (
+    PARTITION BY type
+    ORDER BY date ASC
+    ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+    )
+#5
+
+SELECT 
+    date,
+    type,
+    AVG(average_price) OVER win as mean_price_3
+FROM avocado
+WHERE (region ='NewYork')
+WINDOW win AS
+    (
+    PARTITION BY type
+    ORDER BY date ASC
+    ROWS BETWEEN 2 PRECEDING AND CURRENT ROW
+    )
+ORDER BY type
+
